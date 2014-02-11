@@ -112,12 +112,18 @@ extern void *hash_deleted_item;
 
 
 #define STRING_N_HASH_1(KEY, N, RESULT) do { \
-  unsigned char const *_key_ = (unsigned char const *) (KEY) - 1; \
+  unsigned char const *_key_ = (unsigned char const *) (KEY); \
   int _n_ = (N); \
-  if (_n_) \
-    while (--_n_ && *++_key_) \
-      (RESULT) += (*_key_ << (_key_[1] & 0xf)); \
-  (RESULT) += *++_key_; \
+  while (_n_ >= sizeof(unsigned int)) { \
+    (RESULT) += *(unsigned int *)_key_; \
+    _key_ += sizeof(unsigned int); \
+    _n_ -= sizeof(unsigned int); \
+  } \
+  while (_n_ > 0) { \
+    (RESULT) += *_key_; \
+    ++_key_; \
+    --_n_; \
+  } \
 } while (0)
 #define return_STRING_N_HASH_1(KEY, N) do { \
   unsigned long _result_ = 0; \
@@ -126,12 +132,18 @@ extern void *hash_deleted_item;
 } while (0)
 
 #define STRING_N_HASH_2(KEY, N, RESULT) do { \
-  unsigned char const *_key_ = (unsigned char const *) (KEY) - 1; \
+  unsigned char const *_key_ = (unsigned char const *) (KEY); \
   int _n_ = (N); \
-  if (_n_) \
-    while (--_n_ && *++_key_) \
-      (RESULT) += (*_key_ << (_key_[1] & 0x7)); \
-  (RESULT) += *++_key_; \
+  while (_n_ >= sizeof(unsigned int)) { \
+    (RESULT) += *(unsigned int *)_key_; \
+    _key_ += sizeof(unsigned int); \
+    _n_ -= sizeof(unsigned int); \
+  } \
+  while (_n_ > 0) { \
+    (RESULT) += *_key_; \
+    ++_key_; \
+    --_n_; \
+  } \
 } while (0)
 #define return_STRING_N_HASH_2(KEY, N) do { \
   unsigned long _result_ = 0; \

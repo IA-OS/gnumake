@@ -27,6 +27,7 @@ struct file
   {
     char *name;
     char *hname;                /* Hashed filename */
+    int hname_len;
     char *vpath;                /* VPATH/vpath pathname */
     struct dep *deps;		/* all dependencies, including duplicates */
     struct commands *cmds;	/* Commands to execute for this target.  */

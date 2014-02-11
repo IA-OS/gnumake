@@ -43,13 +43,23 @@ int snapped_deps = 0;
 static unsigned long
 file_hash_1 (const void *key)
 {
-  return_ISTRING_HASH_1 (((struct file const *) key)->hname);
+  const struct file *f = (const struct file *)key;
+#ifdef HAVE_CASE_INSENSITIVE_FS
+  return_ISTRING_HASH_1 (f->hname);
+#else
+  return_STRING_N_HASH_1 (f->hname, f->hname_len);
+#endif
 }
 
 static unsigned long
 file_hash_2 (const void *key)
 {
-  return_ISTRING_HASH_2 (((struct file const *) key)->hname);
+  const struct file *f = (const struct file *)key;
+#ifdef HAVE_CASE_INSENSITIVE_FS
+  return_ISTRING_HASH_2 (f->hname);
+#else
+  return_STRING_N_HASH_2 (f->hname, f->hname_len);
+#endif
 }
 
 static int
@@ -123,6 +133,7 @@ lookup_file (char *name)
 #endif /* VMS */
 
   file_key.hname = name;
+  file_key.hname_len = strlen(name);
   f = (struct file *) hash_find_item (&files, &file_key);
 #if defined(VMS) && !defined(WANT_CASE_SENSITIVE_TARGETS)
   if (*name != '.')
@@ -134,6 +145,7 @@ lookup_file (char *name)
 struct file *
 enter_file (char *name)
 {
+  register int name_len = strlen(name);
   register struct file *f;
   register struct file *new;
   register struct file **file_slot;
@@ -165,6 +177,7 @@ enter_file (char *name)
 #endif
 
   file_key.hname = name;
+  file_key.hname_len = name_len;
   file_slot = (struct file **) hash_find_slot (&files, &file_key);
   f = *file_slot;
   if (! HASH_VACANT (f) && !f->double_colon)
@@ -179,6 +192,7 @@ enter_file (char *name)
   new = (struct file *) xmalloc (sizeof (struct file));
   bzero ((char *) new, sizeof (struct file));
   new->name = new->hname = name;
+  new->hname_len = name_len;
   new->update_status = -1;
 
   if (HASH_VACANT (f))
@@ -219,6 +233,7 @@ rename_file (struct file *from_file, char *to_hname)
 void
 rehash_file (struct file *from_file, char *to_hname)
 {
+  int to_hname_len = strlen(to_hname);
   struct file file_key;
   struct file **file_slot;
   struct file *to_file;
@@ -226,10 +241,12 @@ rehash_file (struct file *from_file, char *to_hname)
   struct file *f;
 
   file_key.hname = to_hname;
+  file_key.hname_len = to_hname_len;
   if (0 == file_hash_cmp (from_file, &file_key))
     return;
 
   file_key.hname = from_file->hname;
+  file_key.hname_len = from_file->hname_len;
   while (from_file->renamed != 0)
     from_file = from_file->renamed;
   if (file_hash_cmp (from_file, &file_key))
@@ -242,12 +259,17 @@ rehash_file (struct file *from_file, char *to_hname)
     abort ();
 
   file_key.hname = to_hname;
+  file_key.hname_len = to_hname_len;
   file_slot = (struct file **) hash_find_slot (&files, &file_key);
   to_file = *file_slot;
 
   from_file->hname = to_hname;
+  from_file->hname_len = to_hname_len;
   for (f = from_file->double_colon; f != 0; f = f->prev)
-    f->hname = to_hname;
+    {
+      f->hname = to_hname;
+      f->hname_len = to_hname_len;
+    }
 
   if (HASH_VACANT (to_file))
     hash_insert_at (&files, from_file, file_slot);
