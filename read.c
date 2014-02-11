@@ -142,6 +142,7 @@ static void record_target_var PARAMS ((struct nameseq *filenames, char *defn,
 static enum make_word_type get_next_mword PARAMS ((char *buffer, char *delim,
                         char **startp, unsigned int *length));
 static void remove_comments PARAMS ((char *line));
+static char *find_char_unquote_simple PARAMS ((char *string, int stop1));
 static char *find_char_unquote PARAMS ((char *string, int stop1,
                                         int stop2, int blank, int ignorevars));
 
@@ -926,7 +927,7 @@ eval (struct ebuffer *ebuf, int set_default)
             if (cmdleft == 0)
               {
                 /* Look for a semicolon in the expanded line.  */
-                cmdleft = find_char_unquote (p2, ';', 0, 0, 0);
+                cmdleft = find_char_unquote_simple (p2, ';');
 
                 if (cmdleft != 0)
                   {
@@ -953,7 +954,7 @@ eval (struct ebuffer *ebuf, int set_default)
                   }
               }
 
-            colonp = find_char_unquote(p2, ':', 0, 0, 0);
+            colonp = find_char_unquote_simple(p2, ':');
 #ifdef HAVE_DOS_PATHS
             /* The drive spec brain-damage strikes again...  */
             /* Note that the only separators of targets in this context
@@ -962,7 +963,7 @@ eval (struct ebuffer *ebuf, int set_default)
             while (colonp && (colonp[1] == '/' || colonp[1] == '\\') &&
                    colonp > p2 && isalpha ((unsigned char)colonp[-1]) &&
                    (colonp == p2 + 1 || strchr (" \t(", colonp[-2]) != 0))
-              colonp = find_char_unquote(colonp + 1, ':', 0, 0, 0);
+              colonp = find_char_unquote_simple(colonp + 1, ':');
 #endif
             if (colonp != 0)
               break;
@@ -1076,7 +1077,7 @@ eval (struct ebuffer *ebuf, int set_default)
 
         /* This is a normal target, _not_ a target-specific variable.
            Unquote any = in the dependency list.  */
-        find_char_unquote (lb_next, '=', 0, 0, 0);
+        find_char_unquote_simple (lb_next, '=');
 
         /* We have some targets, so don't ignore the following commands.  */
         no_targets = 0;
@@ -1091,7 +1092,7 @@ eval (struct ebuffer *ebuf, int set_default)
             /* Look for a semicolon in the expanded line.  */
             if (cmdleft == 0)
               {
-                cmdleft = find_char_unquote (p2, ';', 0, 0, 0);
+                cmdleft = find_char_unquote_simple (p2, ';');
                 if (cmdleft != 0)
                   *(cmdleft++) = '\0';
               }
@@ -1304,7 +1305,7 @@ remove_comments (char *line)
 {
   char *comment;
 
-  comment = find_char_unquote (line, '#', 0, 0, 0);
+  comment = find_char_unquote_simple (line, '#');
 
   if (comment != 0)
     /* Cut off the line at the #.  */
@@ -2139,6 +2140,50 @@ record_files (struct nameseq *filenames, char *pattern, char *pattern_percent,
    STOPCHAR _cannot_ be '$' if IGNOREVARS is true.  */
 
 static char *
+find_char_unquote_simple (char *string, int stop1)
+{
+  unsigned int string_len = 0;
+  register char *p = string;
+
+  while (1)
+    {
+      while (*p != '\0' && *p != stop1)
+	++p;
+
+      if (*p == '\0')
+	break;
+
+      if (p > string && p[-1] == '\\')
+	{
+	  /* Search for more backslashes.  */
+	  register int i = -2;
+	  while (&p[i] >= string && p[i] == '\\')
+	    --i;
+	  ++i;
+	  /* Only compute the length if really needed.  */
+	  if (string_len == 0)
+	    string_len = strlen (string);
+	  /* The number of backslashes is now -I.
+	     Copy P over itself to swallow half of them.  */
+	  bcopy (&p[i / 2], &p[i], (string_len - (p - string)) - (i / 2) + 1);
+	  p += i / 2;
+	  if (i % 2 == 0)
+	    /* All the backslashes quoted each other; the STOPCHAR was
+	       unquoted.  */
+	    return p;
+
+	  /* The STOPCHAR was quoted by a backslash.  Look for another.  */
+	}
+      else
+	/* No backslash in sight.  */
+	return p;
+    }
+
+  /* Never hit a STOPCHAR or blank (with BLANK nonzero).  */
+  return 0;
+}
+
+static char *
 find_char_unquote (char *string, int stop1, int stop2, int blank,
                    int ignorevars)
 {
@@ -2234,7 +2279,7 @@ find_char_unquote (char *string, int stop1, int stop2, int blank,
 char *
 find_percent (char *pattern)
 {
-  return find_char_unquote (pattern, '%', 0, 0, 0);
+  return find_char_unquote_simple (pattern, '%');
 }
 
 /* Parse a string into a sequence of filenames represented as a
