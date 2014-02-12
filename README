@@ -1,0 +1,24 @@
+This is GNU make (http://www.gnu.org/software/make/) version 3.81, optimized
+for building large projects such as Android.
+
+The original GNU make home page is: http://www.gnu.org/software/make/
+The original GNU make git repo is: git://git.savannah.gnu.org/make.git
+
+Example building instructions:
+
+autoreconf -f -i
+./configure
+make CFLAGS="-Wall -O2" LDFLAGS="-s" make
+cp make ~/bin
+
+Example profiling instructions:
+
+make CFLAGS="-Wall -g -pg" make
+cp make ~/bin
+
+cd ~/android
+. build/envsetup
+lunch full-userdebug
+rm -f gmon.out
+make nonexistent-target
+gprof ~/bin/make | less
