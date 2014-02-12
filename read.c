@@ -2147,11 +2147,9 @@ find_char_unquote_simple (char *string, int stop1)
 
   while (1)
     {
-      while (*p != '\0' && *p != stop1)
-	++p;
-
-      if (*p == '\0')
-	break;
+      p = strchr(p, stop1);
+      if (!p)
+        break;
 
       if (p > string && p[-1] == '\\')
 	{
