@@ -1239,65 +1239,72 @@ parse_variable_definition (struct variable *v, char *line)
   while (1)
     {
       c = *p++;
-      if (c == '\0' || c == '#')
-	return 0;
-      if (c == '=')
-	{
+      switch (c)
+        {
+        case '\0':
+        case '#':
+          return 0;
+        case '=':
 	  end = p - 1;
 	  flavor = f_recursive;
-	  break;
-	}
-      else if (c == ':')
-	if (*p == '=')
-	  {
-	    end = p++ - 1;
-	    flavor = f_simple;
-	    break;
-	  }
-	else
+	  goto out;
+	case ':':
+	  if (*p == '=')
+	    {
+	      end = p++ - 1;
+	      flavor = f_simple;
+	      goto out;
+	    }
 	  /* A colon other than := is a rule line, not a variable defn.  */
 	  return 0;
-      else if (c == '+' && *p == '=')
-	{
-	  end = p++ - 1;
-	  flavor = f_append;
-	  break;
-	}
-      else if (c == '?' && *p == '=')
-        {
-          end = p++ - 1;
-          flavor = f_conditional;
-          break;
-        }
-      else if (c == '$')
-	{
-	  /* This might begin a variable expansion reference.  Make sure we
-	     don't misrecognize chars inside the reference as =, := or +=.  */
-	  char closeparen;
-	  int count;
-	  c = *p++;
-	  if (c == '(')
-	    closeparen = ')';
-	  else if (c == '{')
-	    closeparen = '}';
-	  else
-	    continue;		/* Nope.  */
-
-	  /* P now points past the opening paren or brace.
-	     Count parens or braces until it is matched.  */
-	  count = 0;
-	  for (; *p != '\0'; ++p)
+	case '+':
+	  if (*p == '=')
 	    {
-	      if (*p == c)
-		++count;
-	      else if (*p == closeparen && --count < 0)
-		{
-		  ++p;
-		  break;
-		}
+	      end = p++ - 1;
+	      flavor = f_append;
+	      goto out;
 	    }
-	}
+	    break;
+	case '?':
+	  if (*p == '=')
+            {
+              end = p++ - 1;
+              flavor = f_conditional;
+              goto out;
+            }
+            break;
+        case '$':
+	  {
+	    /* This might begin a variable expansion reference.  Make sure we
+	       don't misrecognize chars inside the reference as =, := or +=.  */
+	    char closeparen;
+	    int count;
+	    c = *p++;
+	    if (c == '(')
+	      closeparen = ')';
+	    else if (c == '{')
+	      closeparen = '}';
+	    else
+	      break;		/* Nope.  */
+
+	    /* P now points past the opening paren or brace.
+	       Count parens or braces until it is matched.  */
+	    count = 0;
+	    for (; *p != '\0'; ++p)
+	      {
+	        if (*p == c)
+	  	  ++count;
+	        else if (*p == closeparen && --count < 0)
+		  {
+		    ++p;
+		    break;
+		  }
+	      }
+	  }
+	  break;
+        }
     }
+out:
   v->flavor = flavor;
 
   beg = next_token (line);
