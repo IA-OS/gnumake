@@ -2187,28 +2187,30 @@ find_char_unquote (char *string, int stop1, int stop2, int blank,
 {
   unsigned int string_len = 0;
   register char *p = string;
+  char delim[5+1];
+  int i;
 
   if (ignorevars)
     ignorevars = '$';
 
+  i = 0;
+  if (ignorevars)
+    delim[i++] = ignorevars;
+  if (stop1)
+    delim[i++] = stop1;
+  if (stop2)
+    delim[i++] = stop2;
+  if (blank)
+    {
+      delim[i++] = ' ';
+      delim[i++] = '\t';
+    }
+  delim[i] = '\0';
+
   while (1)
     {
-      if (stop2 && blank)
-	while (*p != '\0' && *p != ignorevars && *p != stop1 && *p != stop2
-	       && ! isblank ((unsigned char) *p))
-	  ++p;
-      else if (stop2)
-	while (*p != '\0' && *p != ignorevars && *p != stop1 && *p != stop2)
-	  ++p;
-      else if (blank)
-	while (*p != '\0' && *p != ignorevars && *p != stop1
-	       && ! isblank ((unsigned char) *p))
-	  ++p;
-      else
-	while (*p != '\0' && *p != ignorevars && *p != stop1)
-	  ++p;
-
-      if (*p == '\0')
+      p = strpbrk(p, delim);
+      if (!p)
 	break;
 
       /* If we stopped due to a variable reference, skip over its contents.  */
